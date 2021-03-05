@@ -9,6 +9,6 @@
 #include <vector>
 #include <iostream>
 
-void extractFileBytes (std::string& outBytes, const std::string filePath);
+void getFileBytes (std::string& outBytes, const std::string filePath);
 
 #endif
