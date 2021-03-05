@@ -12,7 +12,7 @@ pi@raspberrypi:~/rpi-serial-api/build $ make
 ```
 
 # Run
+Run BG96 test code from main/test-BG96.cpp
 ```console
-# Run BG96 test code from main/test-BG96.cpp
 pi@raspberrypi:~/rpi-serial-api $ ./build/BG96
 ```
