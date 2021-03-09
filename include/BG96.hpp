@@ -16,10 +16,14 @@ public:
     ~BG96 ();
 
     int getRssi ();
-    std::string postMultipart (const std::string host,
-                               const std::string uri,
-                               const HttpPostFormData& fields, 
-                               const int timeoutSecs);
+    std::string httpPostMultipart (const std::string host,
+                                   const std::string uri,
+                                   const HttpPostFormData& fields, 
+                                   const int timeoutSecs);
+    std::string httpsPostMultipart (const std::string host,
+                                    const std::string uri,
+                                    const HttpPostFormData& fields,
+                                    const int timeoutSecs);
 
 public:
     void putATcmd (const char* cmd);
@@ -28,6 +32,20 @@ public:
     void putATcmd (std::string cmd, const size_t len);
     std::string getResponse ();
     std::string waitResponseUntil (const std::string expected, const int timeoutSecs);
+
+protected:
+    bool prepareHttpPost (const std::string host, 
+                          const std::string uri, 
+                          const int CONTENT_TYPE, 
+                          const int timeoutSecs);
+    bool prepareHttpsPost (const std::string host, 
+                           const std::string uri, 
+                           const int CONTENT_TYPE, 
+                           const int timeoutSecs);
+    std::string postMultipart (const std::string host, 
+                               const std::string uri,
+                               const HttpPostFormData& fields,
+                               const int timeoutSecs);
 };
 
 #endif

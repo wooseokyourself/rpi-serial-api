@@ -57,76 +57,35 @@ int BG96::getRssi() {
  * @param timeoutSecs Timeout.
  * @return The AT response.
  */
-std::string BG96::postMultipart (const std::string host,
-                                 const std::string uri,
-                                 const HttpPostFormData& fields, 
-                                 const int timeoutSecs) {
+std::string BG96::httpPostMultipart (const std::string host,
+                                     const std::string uri,
+                                     const HttpPostFormData& fields, 
+                                     const int timeoutSecs) {
 
-    // multipart/form-data boundary
-    std::string boundary = "flesruoykoesoow";
+    if (this->prepareHttpPost(host, uri, MULTIPART, timeoutSecs) == true)
+        return this->postMultipart(host, uri, fields, timeoutSecs);
+    return "AT command HTTP ERROR";
+}
 
-    this->putATcmd("AT+QHTTPCFG=\"contextid\",1\r");
-    this->waitResponseUntil("OK", timeoutSecs);
 
-    this->putATcmd("AT+QHTTPCFG=\"contenttype\",3\r"); // 3: multipart/form-data
-    this->waitResponseUntil("OK", timeoutSecs);
+/**
+ * @brief Send HTTPS Post request through AT command.
+ * @param host The host url. There should be no "http://" prefix.
+ *              ex) www.myhome.com
+ * @param uri The uri of url. There should be "/" prefix.
+ *              ex) /my-room/my-desk
+ * @param fields The fields object. This will not be checked for invalid values.
+ * @param timeoutSecs Timeout.
+ * @return The AT response.
+ */
+std::string BG96::httpsPostMultipart (const std::string host,
+                                      const std::string uri,
+                                      const HttpPostFormData& fields, 
+                                      const int timeoutSecs) {
 
-    this->putATcmd("AT+QHTTPCFG=\"requestheader\",1\r");
-    this->waitResponseUntil("OK", timeoutSecs);
-
-    const std::string fullUrl = "http://" + host + uri;
-    this->putATcmd("AT+QHTTPURL=" + std::to_string(fullUrl.length()) + "\r");
-    this->waitResponseUntil("CONNECT", timeoutSecs);
-    this->putATcmd(fullUrl);
-    this->waitResponseUntil("OK", timeoutSecs);
-
-    // Construct body of request form
-    std::string body;
-    for (int i = 0 ; i < fields.size() ; i ++) {
-        std::string contentType = fields.getContentType(i);
-        std::string contentName = fields.getContentName(i);
-        std::string content = fields.getContent(i);
-        if (contentType == "text/plain") {
-            body += ("--" + boundary + "\r\n" + 
-                    "Content-Type: " + contentType + "\r\n" + 
-                    "Content-Disposition: form/data; name=\"" + contentName + "\"\r\n" + 
-                    "\r\n" + 
-                    content + "\r\n"
-            );
-        }
-        else if (contentType == "image/jpeg") {
-            body += ("--" + boundary + "\r\n" + 
-                    "Content-Type: " + contentType + "\r\n" + 
-                    "Content-Disposition: form/data; name=\"files\"; filename=\"" + contentName + "\"\r\n" + 
-                    "\r\n" + 
-                    content + "\r\n"
-            );
-        }
-    }
-    body += ("--" + boundary + "--\r\n");
-
-    // Construct header of request form
-    std::string header = (
-        std::string("POST ") + uri + " HTTP/1.1\r\n" + 
-        "Host: " + host + "\r\n" + 
-        "Content-Length: " + std::to_string(body.length()) + "\r\n" +  
-        "Content-Type: multipart/form-data; boundary=" + boundary + "\r\n" + 
-        "\r\n"
-    );
-
-    std::string maxInputBodyTime = std::to_string(timeoutSecs);
-    std::string maxResponseTime = std::to_string(timeoutSecs);
-    this->putATcmd("AT+QHTTPPOST="
-                    + std::to_string(header.length() + body.length()) + ","
-                    + maxInputBodyTime + "," 
-                    + maxResponseTime + "\r");
-    this->waitResponseUntil("CONNECT", timeoutSecs);
-    this->putATcmd(header);
-    this->putATcmd(body, body.length());
-    this->waitResponseUntil("OK", timeoutSecs);
-
-    this->putATcmd("AT+QHTTPREAD=80\r");
-    return this->waitResponseUntil("CONNECT", timeoutSecs);
+    if (this->prepareHttpPost(host, uri, MULTIPART, timeoutSecs) == true)
+        return this->postMultipart(host, uri, fields, timeoutSecs);
+    return "AT command HTTPS ERROR";
 }
 
 /**
@@ -223,4 +182,131 @@ std::string BG96::waitResponseUntil (const std::string expected, const int timeo
         usleep(2500000); // 2.5s
     }
     return response;
+}
+
+bool BG96::prepareHttpPost (const std::string host, 
+                            const std::string uri, 
+                            const int CONTENT_TYPE, 
+                            const int timeoutSecs) {
+    this->putATcmd("AT+QHTTPCFG=\"contextid\",1\r");
+    this->waitResponseUntil("OK", timeoutSecs);
+
+    this->putATcmd("AT+QHTTPCFG=\"contenttype\"," + std::to_string(CONTENT_TYPE) + "\r");
+    this->waitResponseUntil("OK", timeoutSecs);
+
+    this->putATcmd("AT+QHTTPCFG=\"requestheader\",1\r");
+    this->waitResponseUntil("OK", timeoutSecs);
+
+    const std::string fullUrl = "http://" + host + uri;
+    this->putATcmd("AT+QHTTPURL=" + std::to_string(fullUrl.length()) + "\r");
+    this->waitResponseUntil("CONNECT", timeoutSecs);
+    this->putATcmd(fullUrl);
+    this->waitResponseUntil("OK", timeoutSecs);
+    return true;
+}
+
+bool BG96::prepareHttpsPost (const std::string host, 
+                             const std::string uri, 
+                             const int CONTENT_TYPE, 
+                             const int timeoutSecs) {
+    this->putATcmd("AT+QHTTPCFG=\"contextid\",1\r");
+    std::cout << this->waitResponseUntil("OK", timeoutSecs) << std::endl;
+
+    this->putATcmd("AT+QHTTPCFG=\"contenttype\"," + std::to_string(CONTENT_TYPE) + "\r");
+    std::cout << this->waitResponseUntil("OK", timeoutSecs) << std::endl;
+
+    this->putATcmd("AT+QHTTPCFG=\"requestheader\",1\r");
+    std::cout << this->waitResponseUntil("OK", timeoutSecs) << std::endl;
+
+    // Set SSL context ID.
+    this->putATcmd("AT+QHTTPCFG=\"sslctxid\",1\r");
+    std::cout << this->waitResponseUntil("OK", timeoutSecs) << std::endl;
+
+    // Set SSL version as 1 which means TLsV1.0.
+    this->putATcmd("AT+QSSLCFG=\"sslversion\",1,1\r");
+    std::cout << this->waitResponseUntil("OK", timeoutSecs) << std::endl;
+
+    // Set SSL cipher suite as 0x0005 which means RC4-SHA.
+    this->putATcmd("AT+QSSLCFG=\"ciphersuite\",1,0x0005\r");
+    std::cout << this->waitResponseUntil("OK", timeoutSecs) << std::endl;
+
+    /*
+    // Set SSL verify level as 2 which means you should
+    // upload CA certificate, client certificate and
+    // client private key by AT+QFUPL command.
+    this->putATcmd("AT+QSSLCFG=\"seclevel\",1,2\r");
+    this->waitResponseUntil("OK", timeoutSecs);
+
+    this->putATcmd("AT+QSSLCFG=\"cacert\",1,\"cacert.pem\"\r");
+    this->waitResponseUntil("OK", timeoutSecs);
+
+    this->putATcmd("AT+QSSLCFG=\"clientcert\",1,\"clientcert.pem\"\r");
+    this->waitResponseUntil("OK", timeoutSecs);
+
+    this->putATcmd("AT+QSSLCFG=\"clientkey\",1,\"clientkey.pem\"\r");
+    this->waitResponseUntil("OK", timeoutSecs);
+    */
+
+    const std::string fullUrl = "https://" + host + uri;
+    this->putATcmd("AT+QHTTPURL=" + std::to_string(fullUrl.length()) + "\r");
+    this->waitResponseUntil("CONNECT", timeoutSecs);
+    this->putATcmd(fullUrl);
+    this->waitResponseUntil("OK", timeoutSecs);
+    return true;
+}
+
+std::string BG96::postMultipart (const std::string host,
+                                 const std::string uri,
+                                 const HttpPostFormData& fields, 
+                                 const int timeoutSecs) {
+    // multipart/form-data boundary
+    std::string boundary = "flesruoykoesoow";
+
+    // Construct body of request form
+    std::string body;
+    for (int i = 0 ; i < fields.size() ; i ++) {
+        std::string contentType = fields.getContentType(i);
+        std::string contentName = fields.getContentName(i);
+        std::string content = fields.getContent(i);
+        if (contentType == "text/plain") {
+            body += ("--" + boundary + "\r\n" + 
+                    "Content-Type: " + contentType + "\r\n" + 
+                    "Content-Disposition: form/data; name=\"" + contentName + "\"\r\n" + 
+                    "\r\n" + 
+                    content + "\r\n"
+            );
+        }
+        else if (contentType == "image/jpeg") {
+            body += ("--" + boundary + "\r\n" + 
+                    "Content-Type: " + contentType + "\r\n" + 
+                    "Content-Disposition: form/data; name=\"files\"; filename=\"" + contentName + "\"\r\n" + 
+                    "\r\n" + 
+                    content + "\r\n"
+            );
+        }
+    }
+    body += ("--" + boundary + "--\r\n");
+
+    // Construct header of request form
+    std::string header = (
+        std::string("POST ") + uri + " HTTP/1.1\r\n" + 
+        "Host: " + host + "\r\n" + 
+        "Content-Length: " + std::to_string(body.length()) + "\r\n" +  
+        "Content-Type: multipart/form-data; boundary=" + boundary + "\r\n" + 
+        "\r\n"
+    );
+
+    std::string maxInputBodyTime = std::to_string(timeoutSecs);
+    std::string maxResponseTime = std::to_string(timeoutSecs);
+    this->putATcmd("AT+QHTTPPOST="
+                    + std::to_string(header.length() + body.length()) + ","
+                    + maxInputBodyTime + "," 
+                    + maxResponseTime + "\r");
+    this->waitResponseUntil("CONNECT", timeoutSecs);
+    this->putATcmd(header);
+    this->putATcmd(body, body.length());
+    this->waitResponseUntil("OK", timeoutSecs);
+
+    this->putATcmd("AT+QHTTPREAD=80\r");
+    return this->waitResponseUntil("CONNECT", timeoutSecs);
 }

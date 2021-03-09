@@ -39,7 +39,7 @@ int main (void) {
     fields.addField("text/plain", "time", "1996-03-05");
     fields.addField("text/plain", "rssi", to_string(modem.getRssi()));
     fields.addField("image/jpeg", "myImage.jpg", fileBytes);
-    cout << modem.postMultipart(HOST, URI, fields, 20) << endl;
+    cout << modem.httpsPostMultipart(HOST, URI, fields, 20) << endl;
     fields.clear();
 
     return 0;
